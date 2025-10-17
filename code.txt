@@ -1,0 +1,9 @@
+// comment test
+routine firstRoutine using nothing:
+	define abc_def = 5 * 6;
+	yield true;
+	done;
+
+routine math using a, b, c:
+	a = b * (c - b) + c % 6;
+	done;
