@@ -5,12 +5,18 @@
 #include "CodeWrapper.hpp"
 #include "Tokenizer.hpp"
 #include "Token.hpp"
+#include "SyntaxParser.hpp"
+#include "Routine.hpp"
 #include <vector>
+
+using std::vector;
+using Token::token;
+using std::string;
 
 int main()
 {
     std::cout << "Starting to read file\n";
-	std::string path = "C:/code.txt";
+	string path = "C:/code.txt";
 
 	std::ifstream file(path, std::ifstream::ate | std::ifstream::binary);
 	if (!file.is_open())
@@ -39,28 +45,45 @@ int main()
 	CodeWrapper* wrapper = new CodeWrapper(code, file_size, pos);
 
 	Tokenizer tokenizer(wrapper);
-	std::vector<Token::token*>* tokens;
+	vector<token*>* tokens;
 	try
 	{
-		tokens = tokenizer.parse();
+		tokens = tokenizer.scan();
 	}
 	catch (std::exception error)
 	{
 		std::cout << "Error: " << error.what() << '\n';
-		std::cout << "Stopped parsing at position " << wrapper->pos << " out of " << wrapper->length << "\n";
+		std::cout << "Stopped scanning at position " << wrapper->pos << " out of " << wrapper->length << "\n";
 		return 1;
 	}
 
-	std::cout << "Parsed " << tokens->size() << " tokens\n";
+	std::cout << "Scanned " << tokens->size() << " tokens\n";
 
-	std::vector<Token::token*>::iterator it = tokens->begin();
-	Token::token* token;
+	vector<token*>::iterator it = tokens->begin();
+	token* token;
 	while (it != tokens->end())
 	{
 		token = *it;
 		std::cout << Token::getTokenName(token) << " : " << token->content << '\n';
 		++it;
 	}
+
+	std::cout << "Beginning parsing and AST construction...\n";
+	SyntaxParser parser(tokens);
+	vector<Routine*>* routines;
+	try
+	{
+		routines = parser.parse();
+	}
+	catch (std::exception error)
+	{
+		std::cout << "Error: " << error.what() << '\n';
+		return 1;
+	}
+
+	for (Routine*& r : *routines)
+		delete r;
+	delete routines;
 
 	for (int t = 0; t < tokens->size(); ++t)
 		delete (*tokens)[t];

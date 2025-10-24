@@ -13,7 +13,7 @@ using std::vector;
 using std::string;
 using Token::token;
 
-vector<token*>* Tokenizer::parse()
+vector<token*>* Tokenizer::scan()
 {
 	CodeWrapper* wrapper = this->wrapper;
 	int i = wrapper->pos;
