@@ -11,7 +11,11 @@ class SyntaxParser
 {
 public:
 	vector<token*>* tokens;
+	int pos;
 
-	SyntaxParser(vector<token*>* tokens) : tokens(tokens) {};
+	SyntaxParser(vector<token*>* tokens) : tokens(tokens), pos(0) {};
 	vector<Routine*>* parse();
+	Routine* parseRoutine();
+	Routine* parseRoutineHeader();
+	void parseVariableDefinitions(Routine* routine);
 };

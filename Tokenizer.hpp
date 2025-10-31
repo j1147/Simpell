@@ -9,6 +9,6 @@ public:
 	CodeWrapper* wrapper;
 	Tokenizer(CodeWrapper* wrapper) : wrapper(wrapper) {};
 	std::vector<Token::token*>* scan();
-	Token::token* readIdentifier();
-	Token::token* readNumber();
+	Token::token* readIdentifier() const;
+	Token::token* readNumber() const;
 };

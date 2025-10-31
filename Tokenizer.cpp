@@ -11,16 +11,15 @@
 
 using std::vector;
 using std::string;
-using Token::token;
 
-vector<token*>* Tokenizer::scan()
+vector<Token::token*>* Tokenizer::scan()
 {
 	CodeWrapper* wrapper = this->wrapper;
 	int i = wrapper->pos;
 	const long length = wrapper->length;
 	const char* code = wrapper->code;
 
-	vector<token*>* tokens = new vector<token*>();
+	vector<Token::token*>* tokens = new vector<Token::token*>();
 
 	while (wrapper->pos < length)
 	{
@@ -43,14 +42,14 @@ vector<token*>* Tokenizer::scan()
 
 		if (Token::isControlFlow(code[i]))
 		{
-			tokens->push_back(new token(Token::Type::CONTROL_FLOW, code[i]));
+			tokens->push_back(new Token::token(Token::Type::CONTROL_FLOW, code[i]));
 			++wrapper->pos;
 			continue;
 		}
 
 		if (Token::Operator::isOperator(code[i]))
 		{
-			tokens->push_back(new token(Token::Type::OPERATOR, code[i]));
+			tokens->push_back(new Token::token(Token::Type::OPERATOR, code[i]));
 			++wrapper->pos;
 			continue;
 		}
@@ -62,7 +61,7 @@ vector<token*>* Tokenizer::scan()
 	return tokens;
 }
 
-token* Tokenizer::readIdentifier()
+Token::token* Tokenizer::readIdentifier() const
 {
 	CodeWrapper* wrapper = this->wrapper;
 	int i = wrapper->pos;
@@ -76,10 +75,13 @@ token* Tokenizer::readIdentifier()
 
 	wrapper->pos = i;
 
-	return new token(Token::Type::STRING, identifier);
+	return new Token::token(
+		Token::Keyword::isKeyword(identifier) ? Token::Type::KEYWORD : Token::Type::STRING,
+		identifier
+	);
 }
 
-token* Tokenizer::readNumber()
+Token::token* Tokenizer::readNumber() const
 {
 	CodeWrapper* wrapper = this->wrapper;
 	int i = wrapper->pos;
@@ -93,5 +95,5 @@ token* Tokenizer::readNumber()
 
 	wrapper->pos = i;
 
-	return new token(Token::Type::NUMBER, content);
+	return new Token::token(Token::Type::NUMBER, content);
 }

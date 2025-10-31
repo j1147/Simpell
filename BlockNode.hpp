@@ -8,4 +8,7 @@ class BlockNode : public GenericNode
 {
 public:
 	vector<GenericNode*>* subtrees;
+
+	BlockNode() : subtrees(new vector<GenericNode*>()) {};
+	~BlockNode();
 };

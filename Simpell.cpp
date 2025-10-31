@@ -10,7 +10,6 @@
 #include <vector>
 
 using std::vector;
-using Token::token;
 using std::string;
 
 int main()
@@ -45,7 +44,7 @@ int main()
 	CodeWrapper* wrapper = new CodeWrapper(code, file_size, pos);
 
 	Tokenizer tokenizer(wrapper);
-	vector<token*>* tokens;
+	vector<Token::token*>* tokens;
 	try
 	{
 		tokens = tokenizer.scan();
@@ -59,8 +58,8 @@ int main()
 
 	std::cout << "Scanned " << tokens->size() << " tokens\n";
 
-	vector<token*>::iterator it = tokens->begin();
-	token* token;
+	vector<Token::token*>::iterator it = tokens->begin();
+	Token::token* token;
 	while (it != tokens->end())
 	{
 		token = *it;
