@@ -1,0 +1,37 @@
+// comment test
+routine testRoutine using p_one, p_two, p_three, p_four:
+	define abc_def = 5 * (6 + 7);
+	yield true;
+	done;
+
+routine main using nothing:
+	define a;
+	define b = 0;
+	define c = 0;
+
+	define sixty = "sixty";
+	define twenty = "twenty";
+
+	call print with 6, 7 + 3, 15 %3;
+	
+	c = 2;
+	b = 1;
+
+	a = b * (c - b) + c % 6;
+
+	call print with a, b, c;
+
+	call print with "the number " + " is " + 70;
+	call print with sixty + " " + twenty;
+
+	if (a + b + c < 500.00) & 0:
+		call print with 700;
+		done;
+	else
+		call print with 600;
+		done;
+
+	a = call testRoutine with 0, 0, 0, 0;
+
+	call print with "a is " + a;
+	done; 
