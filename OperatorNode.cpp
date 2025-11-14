@@ -1,12 +1,15 @@
 #pragma once
-#pragma pointers_to_members( full_generality, virtual_inheritance )
+#include "_global.hpp"
+#include "AbstractNode.hpp"
 #include "OperatorNode.hpp"
 #include <stdexcept>
 #include <format>
 #include <iostream>
+#include <vector>
 
 using std::runtime_error;
 using std::format;
+using std::vector;
 
 bool OperatorNode::isFull() const
 {
@@ -16,7 +19,7 @@ bool OperatorNode::isFull() const
 		left != nullptr && right != nullptr;
 }
 
-void OperatorNode::disown(GenericNode* node)
+void OperatorNode::disown(AbstractNode* node)
 {
 	if (left == node)
 		left = right;
@@ -28,7 +31,7 @@ void OperatorNode::disown(GenericNode* node)
 	node->parent = nullptr;
 }
 
-void OperatorNode::consume(GenericNode* node)
+void OperatorNode::consume(AbstractNode* node)
 {
 	if (left == nullptr)
 		left = node;
@@ -39,8 +42,7 @@ void OperatorNode::consume(GenericNode* node)
 
 	if (node->parent)
 	{
-		GenericNode* parent = node->parent;
-
+		AbstractBranchNode* parent = node->parent;
 		parent->disown(node);
 		parent->consume(this);
 	}
@@ -48,14 +50,14 @@ void OperatorNode::consume(GenericNode* node)
 	node->parent = this;
 }
 
-GenericNode* OperatorNode::getRightmostNode() const
+AbstractNode* OperatorNode::getRightmostNode() const
 {
 	return right ? right : left ? left : nullptr;
 }
 
-void OperatorNode::log()
+void OperatorNode::log() const
 {
-	std::cout << "Operator " << opcode << " { ";
+	std::cout << "Operator " << opcode() << " { ";
 	if (left)
 	{
 		left->log();
@@ -64,4 +66,21 @@ void OperatorNode::log()
 	if (right)
 		right->log();
 	std::cout << " }";
+}
+
+void OperatorNode::dumpToStack(vector<const AbstractNode*>* stack) const {
+	assert(this->isFull());
+	left->dumpToStack(stack);
+	if (right)
+		right->dumpToStack(stack);
+
+	stack->push_back(this);
+}
+
+OperatorNode::~OperatorNode()
+{
+	if (left)
+		delete left;
+	if (right)
+		delete right;
 }

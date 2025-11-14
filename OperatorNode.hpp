@@ -1,30 +1,37 @@
 #pragma once
-#include "GenericNode.hpp"
+#include "AbstractBranchNode.hpp"
+#include "AbstractNode.hpp"
 #include "Token.hpp"
+#include <string>
+#include <format>
+#include <vector>
+#include <cassert>
 
-class OperatorNode : public GenericNode
+using std::string;
+using std::vector;
+using std::format;
+
+class OperatorNode : public AbstractBranchNode
 {
 public:
-	GenericNode* left;
-	GenericNode* right;
-	OperatorNode* parent;
-	
-	bool isUnary;
-	char opcode;
-	unsigned int localPrecedence;
+	AbstractNode* left;
+	AbstractNode* right;
 
-	OperatorNode(char opcode, unsigned int localPrecedence) :
-		opcode(opcode),
+	OperatorNode(const Token::token* token, unsigned int localPrecedence) :
+		AbstractBranchNode(token, Token::Operator::isUnaryOperator(token->first()), localPrecedence),
 		left(nullptr),
-		right(nullptr),
-		parent(nullptr),
-		isUnary(Token::Operator::isUnaryOperator(opcode)),
-		localPrecedence(localPrecedence)
+		right(nullptr)
 	{};
 
+	char opcode() const { return token->first(); }
 	bool isFull() const;
-	void disown(GenericNode* node);
-	void consume(GenericNode* node);
-	GenericNode* getRightmostNode() const;
-	void log();
+	void disown(AbstractNode* node);
+	void consume(AbstractNode* node);
+	AbstractNode* getRightmostNode() const;
+	void log() const;
+	string name() const { return format("OperatorNode {}", opcode()); };
+
+	void dumpToStack(vector<const AbstractNode*>* stack) const;
+
+	~OperatorNode();
 };

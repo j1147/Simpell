@@ -1,16 +1,19 @@
 #pragma once
-#include "GenericNode.hpp"
+#include "AbstractNode.hpp"
+#include "Token.hpp"
 #include <string>
+#include <format>
 #include <iostream>
 
 using std::string;
+using std::format;
 
-class VariableNode : public GenericNode
+class VariableNode : public AbstractNode
 {
 public:
-	string variableName;
+	VariableNode(const Token::token* token) : AbstractNode(token) {};
 
-	VariableNode(const string& variableName) : variableName(variableName) {};
-
-	void log() { std::cout << "Variable " << variableName; };
+	const string& variableName() const { return token->content; }
+	void log() const { std::cout << "Variable " << variableName(); };
+	string name() const { return format("VariableNode {}", this->token->content); };
 };

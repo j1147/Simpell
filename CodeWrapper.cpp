@@ -1,4 +1,5 @@
 #pragma once
+#include "_global.hpp"
 #include "CodeWrapper.hpp"
 #include "Token.hpp"
 
@@ -9,10 +10,13 @@ CodeWrapper::~CodeWrapper()
 
 void CodeWrapper::skipWhitespaces()
 {
-	int& i = this->pos;
-	const long length = this->length;
+	unsigned int& i = this->pos;
+	const size_t length = this->length;
 	const char* code = this->code;
 	while (i < length)
+	{
+		if (code[i] == Token::newline)
+			++this->lineNumber;
 		if (Token::isWhitespace(code[i]))
 			++i;
 		else if (i < length - 1 && code[i] == '/' && code[i + 1] == '/')
@@ -21,4 +25,5 @@ void CodeWrapper::skipWhitespaces()
 				++i;
 		else
 			break;
+	}
 }

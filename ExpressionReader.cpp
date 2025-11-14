@@ -1,12 +1,16 @@
 #pragma once
+#include "_global.hpp"
 #include "Token.hpp"
 #include "ExpressionReader.hpp"
 #include "ExpressionNode.hpp"
-#include "FunctionCallNode.hpp"
+#include "RoutineCallNode.hpp"
 #include "OperatorNode.hpp"
-#include "GenericNode.hpp"
+#include "AbstractNode.hpp"
+#include "AbstractBranchNode.hpp"
 #include "VariableNode.hpp"
 #include "NumberNode.hpp"
+#include "MetaParser.hpp"
+#include "StringNode.hpp"
 #include <stdexcept>
 #include <format>
 #include <vector>
@@ -18,14 +22,14 @@ using std::vector;
 
 ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context context)
 {
-	const vector<token*>& tokens = *this->parser->tokens;
-	Token::token* token;
+	const vector<Token::token*>& tokens = *this->parser->tokens;
+	Token::token* token = nullptr;
 	const size_t length = tokens.size();
 	int& t = this->parser->pos;
 
-	OperatorNode* currentOperator = nullptr,
+	AbstractBranchNode* currentOperator = nullptr,
 		* tempOp = nullptr;
-	GenericNode* currentTerm = nullptr;
+	AbstractNode* currentTerm = nullptr;
 
 	int terms = 0;
 
@@ -46,42 +50,35 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 		if (token->type == Token::Type::CONTROL_FLOW)
 			if ((context == ExpressionReader::Context::INLINE || context == ExpressionReader::Context::FUNCTION_ARGUMENT)
 				&& token->first() == Token::semicolon)
-			{
-				++t;
 				break;
-			}
 			else if ((context == ExpressionReader::Context::CONDITION || context == ExpressionReader::Context::FUNCTION_ARGUMENT)
 				&& token->first() == Token::colon)
-			{
-				++t;
 				break;
-			}
 			else if (context == ExpressionReader::Context::FUNCTION_ARGUMENT && token->first() == Token::comma)
-			{
-				++t;
 				break;
-			}
-			else throw runtime_error(format("unexpected token {}, delete this", token->content));
+			else
+				throw runtime_error(this->parser->format("unexpected token {}, delete this hhhh", token->content));
 
 		// Unfortunately ad-hoc true/false conversion
-		if (token->type == Token::Type::KEYWORD && (token->content == Token::Keyword::kw_true || token->content == Token::Keyword::kw_false))
+		if (token->type == Token::Type::KEYWORD &&
+			(token->content == Token::Keyword::kw_true.content || token->content == Token::Keyword::kw_false.content))
 		{
 			token->type = Token::Type::NUMBER;
-			token->content = token->content == Token::Keyword::kw_true ? "1" : "0";
+			token->content = token->content == Token::Keyword::kw_true.content ? "1" : "0";
 		}
 
 		// Tree building
 		if (token->type == Token::Type::OPERATOR)
 		{
 			// Parentheses
-			if (token->first() == Token::Operator::l_parenthesis)
+			if (token->first() == Token::Operator::l_parenthesis.first())
 			{
 				localPrecedence += Token::Operator::HIGHEST_PRECEDENCE;
 				++parentheses;
 				++t;
 				continue;
 			}
-			else if (token->first() == Token::Operator::r_parenthesis)
+			else if (token->first() == Token::Operator::r_parenthesis.first())
 			{
 				if (parentheses == 0)
 					throw runtime_error("unbalanced parentheses");
@@ -96,10 +93,10 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 			{
 				// Nothing to operate on yet
 				if (currentTerm == nullptr && !Token::Operator::isUnaryOperator(token->first()))
-					throw runtime_error(format("unexpected token {}, delete this", token->content));
+					throw runtime_error(this->parser->format("unexpected token {}, delete this", token->content));
 
 				currentOperator = new OperatorNode(
-					token->first(),
+					Token::Operator::getOperator(token->first()),
 					Token::Operator::getPrecedence(token->first()) + localPrecedence
 				);
 
@@ -107,7 +104,7 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 				{
 					// ! must come before, not after
 					if (currentOperator->isUnary)
-						throw runtime_error(format("unexpected token {}, delete this", token->content));
+						throw runtime_error(this->parser->format("unexpected token {}, delete this", token->content));
 					currentOperator->consume(currentTerm);
 					currentTerm = nullptr;
 				}
@@ -117,7 +114,7 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 				continue;
 			}
 
-			// Tree action
+			// Tree building
 			// Avoid cases like "+ *", but accept cases like "!!" (need a better system for this)
 			if (!currentOperator->isFull())
 			{
@@ -126,7 +123,7 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 					{
 						// Ex.: !!
 						tempOp = new OperatorNode(
-							token->first(),
+							Token::Operator::getOperator(token->first()),
 							Token::Operator::getPrecedence(token->first()) + localPrecedence
 						);
 						currentOperator->consume(tempOp);
@@ -134,12 +131,12 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 					}
 					else
 						// Ex.: !+
-						throw runtime_error(format("unexpected token {}, delete this", token->content));
+						throw runtime_error(this->parser->format("unexpected token {}, delete this", token->content));
 				else if (Token::Operator::isUnaryOperator(token->first()))
 				{
 					// Ex.: a+!
 					tempOp = new OperatorNode(
-						token->first(),
+						Token::Operator::getOperator(token->first()),
 						Token::Operator::getPrecedence(token->first()) + localPrecedence
 					);
 					currentOperator->consume(tempOp);
@@ -147,13 +144,13 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 				}
 				else
 					// Ex.: a+*
-					throw runtime_error(format("unexpected token {}, delete this", token->content));
+					throw runtime_error(this->parser->format("unexpected token {}, delete this", token->content));
 			}
 			else
 			{
 				// Ex(s).: a+b* , !a-
 				tempOp = new OperatorNode(
-					token->first(),
+					Token::Operator::getOperator(token->first()),
 					Token::Operator::getPrecedence(token->first()) + localPrecedence
 				);
 				while (currentOperator->parent != nullptr && currentOperator->localPrecedence > tempOp->localPrecedence)
@@ -166,23 +163,27 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 					tempOp->consume(currentOperator->getRightmostNode());
 				else
 					tempOp->consume(currentOperator);
+
 				currentOperator = tempOp;
 			}
 
 			++t;
 			++terms;
 		}
-		else if (token->type == Token::Type::STRING || token->type == Token::Type::NUMBER)
+		else if (token->type == Token::Type::NAME || token->type == Token::Type::NUMBER || token->type == Token::Type::STRING_LITERAL)
 		{
 			// Numbers & variables
 			if ((currentOperator == nullptr && currentTerm != nullptr)
 				|| (currentOperator != nullptr && currentOperator->isFull()))
-				throw runtime_error(format("unexpected token {}, delete this", token->content));
+				throw runtime_error(this->parser->format("unexpected token {}, delete this", token->content));
 
-			currentTerm = token->type == Token::Type::STRING ?
-				(GenericNode*) new VariableNode(token->content)
+			currentTerm = token->type == Token::Type::NAME ?
+				(AbstractNode*) new VariableNode(token)
 				:
-				(GenericNode*) new NumberNode(token->content);
+				token->type == Token::Type::STRING_LITERAL ?
+					(AbstractNode*) new StringNode(token)
+					:
+					(AbstractNode*) new NumberNode(token);
 
 			if (currentOperator)
 			{
@@ -196,34 +197,69 @@ ExpressionNode* ExpressionReader::parseExpression(ExpressionReader::Context cont
 		else if (token->type == Token::Type::KEYWORD)
 		{
 			// Function calls
-			if (token->content == Token::Keyword::kw_call)
+			if (token->content == Token::Keyword::kw_call.content)
 			{
-				if (terms > 0 || context == ExpressionReader::Context::FUNCTION_ARGUMENT)
-					throw runtime_error(format("function calls cannot be nested"));
-				// Function calls should be on their own
-				ExpressionReader callReader(this->parser);
-				return new ExpressionNode(callReader.parseFunctionCall(context));
+				if (terms > 2 || context == ExpressionReader::Context::FUNCTION_ARGUMENT)
+					throw runtime_error(this->parser->format("function calls cannot be nested"));
+				// Function calls should be on their own, either as an assignment or as a call
+				currentTerm = parseFunctionCall(context);
+
+				if (currentOperator)
+				{
+					currentOperator->consume(currentTerm);
+					currentTerm = nullptr;
+				}
+
+				++terms;
+				// Should immediately break afterwards, due to a function call's consuming nature
+				--t; // Side effect: prevent issues when function call is the last thing in a file
+				break;
 			}
 			else
 				// Statements and blocks delegated elsewhere
-				throw runtime_error(format("unexpected keyword {}, delete this", token->content));
+				throw runtime_error(this->parser->format("unexpected keyword {}, delete this", token->content));
 		}
 	}
+
+	if (t >= length)
+		throw runtime_error(this->parser->format("unexpected end of file"));
+	// Move past colon/semicolon
+	++t;
+
 	if (!currentOperator)
 	{
+		if (currentTerm)
+			return new ExpressionNode(currentTerm);
 		return nullptr;
 	}
+
+	if (!currentOperator->isFull())
+		throw runtime_error(this->parser->format("unexpected end of expression"));
+
 	// Get to the top of the tree
 	while (currentOperator->parent)
 		currentOperator = currentOperator->parent;
 
-	currentOperator->log();
-	std::cout << '\n';
+	//currentOperator->log();
+	//std::cout << '\n';
 
-	return nullptr;
+	return new ExpressionNode(currentOperator);
 }
 
-FunctionCallNode* ExpressionReader::parseFunctionCall(ExpressionReader::Context context)
+RoutineCallNode* ExpressionReader::parseFunctionCall(ExpressionReader::Context context)
 {
-	return nullptr;
+	const vector<Token::token*>& tokens = *this->parser->tokens;
+	Token::token* token = nullptr;
+	const size_t length = tokens.size();
+	int& t = this->parser->pos;
+
+	MetaParser parser(this->parser);
+
+	parser.verifyKeyword(Token::Keyword::kw_call);
+	string* routineName = parser.getString();
+	parser.verifyKeyword(Token::Keyword::kw_with);
+
+	vector<ExpressionNode*>* args = parser.parseExpressionList(context);
+
+	return new RoutineCallNode(routineName, args);
 }

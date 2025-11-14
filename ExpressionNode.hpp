@@ -1,10 +1,15 @@
 #pragma once
-#include "GenericNode.hpp"
+#include "AbstractNode.hpp"
 
-class ExpressionNode : public GenericNode
+class ExpressionNode : public AbstractNode
 {
 public:
-	GenericNode* top;
+	AbstractNode* top;
 
-	ExpressionNode(GenericNode* top) : top(top) {};
+	ExpressionNode(AbstractNode* top) : top(top) {};
+
+	void log() const {};
+	std::string name() const { return "ExpressionNode"; };
+
+	~ExpressionNode();
 };

@@ -1,7 +1,7 @@
 #pragma once
 #include "SyntaxParser.hpp"
 #include "ExpressionNode.hpp"
-#include "FunctionCallNode.hpp"
+#include "RoutineCallNode.hpp"
 
 class ExpressionReader
 {
@@ -15,5 +15,5 @@ public:
 
 	ExpressionReader(SyntaxParser* parser) : parser(parser) {};
 	ExpressionNode* parseExpression(ExpressionReader::Context context);
-	FunctionCallNode* parseFunctionCall(ExpressionReader::Context context);
+	RoutineCallNode* parseFunctionCall(ExpressionReader::Context context);
 };

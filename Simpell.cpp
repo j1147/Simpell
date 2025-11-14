@@ -1,13 +1,15 @@
+#include "_global.hpp"
 #include <iostream>
 #include <fstream>
 #include <sys/stat.h>
-#include "BlockReader.hpp"
 #include "CodeWrapper.hpp"
 #include "Tokenizer.hpp"
 #include "Token.hpp"
 #include "SyntaxParser.hpp"
 #include "Routine.hpp"
+#include "Executor.hpp"
 #include <vector>
+#include <memory>
 
 using std::vector;
 using std::string;
@@ -44,7 +46,7 @@ int main()
 	CodeWrapper* wrapper = new CodeWrapper(code, file_size, pos);
 
 	Tokenizer tokenizer(wrapper);
-	vector<Token::token*>* tokens;
+	vector<Token::token*>* tokens = nullptr;
 	try
 	{
 		tokens = tokenizer.scan();
@@ -53,40 +55,62 @@ int main()
 	{
 		std::cout << "Error: " << error.what() << '\n';
 		std::cout << "Stopped scanning at position " << wrapper->pos << " out of " << wrapper->length << "\n";
+		if (tokens)
+		{
+			deleteAll(tokens);
+			delete(tokens);
+		}
 		return 1;
 	}
 
+	delete wrapper;
+
 	std::cout << "Scanned " << tokens->size() << " tokens\n";
 
-	vector<Token::token*>::iterator it = tokens->begin();
+	/*vector<Token::token*>::iterator it = tokens->begin();
 	Token::token* token;
 	while (it != tokens->end())
 	{
 		token = *it;
 		std::cout << Token::getTokenName(token) << " : " << token->content << '\n';
 		++it;
-	}
+	}*/
 
 	std::cout << "Beginning parsing and AST construction...\n";
 	SyntaxParser parser(tokens);
-	vector<Routine*>* routines;
+	vector<Routine*>* routines = nullptr;
 	try
 	{
 		routines = parser.parse();
 	}
 	catch (std::exception error)
 	{
-		std::cout << "Error: " << error.what() << '\n';
-		return 1;
+		std::cout << "Error: " << error.what() << "\n";
+		goto cleanup;
 	}
 
-	for (Routine*& r : *routines)
-		delete r;
+	std::cout << "Finished parsing.\n";
+	std::cout << "Beginning execution...\n\n\n\n";
+
+	try
+	{
+		Executor executor(routines);
+		executor.execute();
+	}
+	catch (std::exception error)
+	{
+		std::cout << "Runtime error: " << error.what() << "\n";
+		goto cleanup;
+	}
+
+	std::cout << "Program finished successfully.\n";
+
+cleanup:
+	if (routines)
+		deleteAll(routines);
 	delete routines;
 
-	for (int t = 0; t < tokens->size(); ++t)
-		delete (*tokens)[t];
+	if (tokens)
+		deleteAll(tokens);
 	delete tokens;
-
-	delete wrapper;
 }

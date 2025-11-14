@@ -1,9 +1,33 @@
 #pragma once
+#include "_global.hpp"
 #include "Token.hpp"
 #include <ctype.h>
 #include <string>
 
 using std::string;
+
+bool Token::equals(Token::token* a, Token::token* b)
+{
+	if (a == b)
+		return true;
+	if ((!a && b) || (!b && a))
+		return false;
+	if (a && b)
+		return a->content == b->content && a->type == b->type;
+	else
+		return false;
+}
+bool Token::equals(Token::token* a, const Token::token* b)
+{
+	if (a == b)
+		return true;
+	if ((!a && b) || (!b && a))
+		return false;
+	if (a && b)
+		return a->content == b->content && a->type == b->type;
+	else
+		return false;
+}
 
 bool Token::isNewline(char character)
 {
@@ -21,10 +45,7 @@ bool Token::isControlFlow(char character)
 	{
 	case semicolon:
 	case colon:
-	case l_bracket:
-	case r_bracket:
 	case comma:
-	case q_mark:
 		return true;
 	default:
 		return false;
@@ -33,81 +54,79 @@ bool Token::isControlFlow(char character)
 
 bool Token::Keyword::isKeyword(string str)
 {
-	return str == kw_true
-		|| str == kw_false
-		|| str == kw_routine
-		|| str == kw_using
-		|| str == kw_nothing
-		|| str == kw_define
-		|| str == kw_during
-		|| str == kw_if
-		|| str == kw_else
-		|| str == kw_done
-		|| str == kw_yield
-		|| str == kw_call
-		|| str == kw_with;
+	return str == kw_true.content
+		|| str == kw_false.content
+		|| str == kw_routine.content
+		|| str == kw_using.content
+		|| str == kw_nothing.content
+		|| str == kw_define.content
+		|| str == kw_during.content
+		|| str == kw_if.content
+		|| str == kw_else.content
+		|| str == kw_done.content
+		|| str == kw_yield.content
+		|| str == kw_call.content
+		|| str == kw_with.content;
 }
 
 bool Token::Operator::isOperator(char character)
 {
-	switch (character)
-	{
-	case equal:
-	case greater_than:
-	case less_than:
-	case add:
-	case sub:
-	case mul:
-	case div:
-	case invert:
-	case mod:
-	case op_and:
-	case op_or:
-	case dot:
-	case l_parenthesis:
-	case r_parenthesis:
-		return true;
-	default:
-		return false;
-	}
+	return character == equal.first()
+		|| character == less_than.first()
+		|| character == greater_than.first()
+		|| character == add.first()
+		|| character == sub.first()
+		|| character == mul.first()
+		|| character == div.first()
+		|| character == mod.first()
+		|| character == invert.first()
+		|| character == op_and.first()
+		|| character == op_or.first()
+		//|| character == dot.first()
+		|| character == l_parenthesis.first()
+		|| character == r_parenthesis.first();
 }
 
 bool Token::Operator::isUnaryOperator(char character)
 {
-	switch (character)
-	{
-	case invert:
-		return true;
-	default:
-		return false;
-	}
+	return character == invert.first();
 }
 
 unsigned int Token::Operator::getPrecedence(char character)
 {
-	switch (character)
-	{
-	case equal:
-	case less_than:
-	case greater_than:
+	if (character == equal.first()
+		|| character == less_than.first()
+		|| character == greater_than.first())
 		return 0;
-	case op_and:
-	case op_or:
+
+	if (character == op_and.first()
+		|| character == op_or.first())
 		return 1;
-	case add:
-	case sub:
+
+	if (character == add.first()
+		|| character == sub.first())
 		return 2;
-	case mul:
-	case div:
-	case mod:
+
+	if (character == mul.first()
+		|| character == div.first()
+		|| character == mod.first())
 		return 3;
-	case invert:
+
+	if (character == invert.first())
 		return 4;
-	case dot:
-		return 5;
-	default:
-		return 0;
-	}
+
+	//if (character == dot.first())
+	//	return 5;
+
+	return 0;
+}
+
+const Token::token* Token::Operator::getOperator(char character)
+{
+	for (const Token::token& token : OPERATOR_LIST)
+		if (token.first() == character)
+			return &token;
+	return nullptr;
 }
 
 bool Token::isIdentifierValid(char character)
@@ -127,7 +146,7 @@ string Token::getTokenName(token* token)
 {
 	switch (token->type)
 	{
-	case Token::Type::STRING:
+	case Token::Type::NAME:
 		return "string";
 	case Token::Type::NUMBER:
 		return "number";

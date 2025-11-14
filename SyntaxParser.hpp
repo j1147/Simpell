@@ -1,21 +1,35 @@
 #pragma once
 #include <vector>
 #include "Token.hpp"
-#include "GenericNode.hpp"
 #include "Routine.hpp"
+#include <string>
+#include <format>
 
 using std::vector;
-using Token::token;
+using std::string;
 
 class SyntaxParser
 {
 public:
-	vector<token*>* tokens;
+	const vector<Token::token*>* tokens;
 	int pos;
 
-	SyntaxParser(vector<token*>* tokens) : tokens(tokens), pos(0) {};
+	SyntaxParser(const vector<Token::token*>* tokens) : tokens(tokens), pos(0) {};
+	string getLineNumber();
+
+
 	vector<Routine*>* parse();
 	Routine* parseRoutine();
-	Routine* parseRoutineHeader();
-	void parseVariableDefinitions(Routine* routine);
+
+	string format(string input)
+	{
+		return input + " " + getLineNumber();
+	}
+
+	template <typename... Args>
+	string format(string input, Args... values)
+	{
+		//return "an error occured";
+		return std::vformat(input, std::make_format_args(values...)) + " " + getLineNumber();
+	}
 };

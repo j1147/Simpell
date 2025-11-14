@@ -1,14 +1,35 @@
 #pragma once
-#include "GenericNode.hpp"
+#include "AbstractNode.hpp"
+#include "ExpressionNode.hpp"
+#include "Token.hpp"
+#include <string>
 #include <vector>
 
 using std::vector;
 
-class BlockNode : public GenericNode
+class BlockNode : public AbstractNode
 {
 public:
-	vector<GenericNode*>* subtrees;
+	ExpressionNode* condition;
+	vector<AbstractNode*>* subtrees;
 
-	BlockNode() : subtrees(new vector<GenericNode*>()) {};
+	BlockNode(const Token::token* header) :
+		AbstractNode(header),
+		subtrees(new vector<AbstractNode*>()),
+		condition(nullptr)
+	{};
+	BlockNode(const Token::token* header, vector<AbstractNode*>* subtrees) :
+		AbstractNode(header),
+		subtrees(subtrees),
+		condition(nullptr)
+	{};
+	BlockNode(const Token::token* header, ExpressionNode* condition, vector<AbstractNode*>* subtrees) :
+		AbstractNode(header),
+		subtrees(subtrees),
+		condition(condition)
+	{};
+
+	void log() const {};
+	std::string name() const { return "BlockNode"; };
 	~BlockNode();
 };

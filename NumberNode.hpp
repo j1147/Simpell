@@ -1,22 +1,21 @@
 #pragma once
-#include "GenericNode.hpp"
+#include "AbstractNode.hpp"
+#include <vector>
 #include <string>
+#include <format>
 #include <iostream>
 
 using std::string;
+using std::vector;
+using std::format;
 
-class NumberNode : public GenericNode
+class NumberNode : public AbstractNode
 {
 public:
-	// Converted to numeric values when the program is running
-	string preValue;
 	double value;
-	// Rationale: numbers with decimals (like 1500.25) are merged into one during expression reading
-	// because a period is treated as an operator
-	bool wasMerged;
 
-	NumberNode(const string& preValue) : preValue(preValue), value(0), wasMerged(false) {};
-	NumberNode(double value) : value(value), wasMerged(true) {};
+	NumberNode(const Token::token* token) : AbstractNode(token), value(std::stod(token->content)) {};
 
-	void log() { std::cout << "Number " << preValue; };
+	void log() const { std::cout << "Number " << token->content; };
+	string name() const { return format("NumberNode {}", this->value); };
 };

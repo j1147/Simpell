@@ -4,11 +4,17 @@
 class CodeWrapper
 {
 public:
-	char* code;
-	long length;
-	int pos;
+	const char* code;
+	const size_t length;
+	unsigned int pos;
+	unsigned int lineNumber;
 
-	CodeWrapper(char* code, long length, int pos) : code(code), length(length), pos(pos) {};
+	CodeWrapper(const char* code, const size_t length, int pos) :
+		code(code),
+		length(length),
+		pos(pos),
+		lineNumber(1)
+	{};
 
 	void skipWhitespaces();
 

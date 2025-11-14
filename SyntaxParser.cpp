@@ -1,192 +1,96 @@
 #pragma once
+#include "_global.hpp"
 #include "Token.hpp"
 #include "SyntaxParser.hpp"
 #include "Routine.hpp"
 #include "Variable.hpp"
 #include "ExpressionReader.hpp"
+#include "MetaParser.hpp"
 #include <vector>
 #include <stdexcept>
-#include <format>
 #include <string>
-
+#include <memory>
+#include <format>
 #include <iostream>
 
 using std::vector;
 using std::runtime_error;
-using std::format;
 using std::string;
+
+string SyntaxParser::getLineNumber()
+{
+	const size_t length = this->tokens->size();
+	const int t = this->pos >= (int) length ? (int) length - 1 : this->pos;
+	return std::format("(near line {})", (*this->tokens)[t]->lineNumber);
+};
 
 vector<Routine*>* SyntaxParser::parse()
 {
-	vector<Routine*>* routines = new vector<Routine*>();
-	
-	const size_t length = tokens->size();
-	Token::token* token;
+	std::unique_ptr<vector<Routine*>> routines = std::make_unique<vector<Routine*>>();
+	const vector<Token::token*>& tokens = *this->tokens;
+	const size_t length = tokens.size();
+	int& t = this->pos;
 
-	while (this->pos < length)
+	try
 	{
-		token = (*tokens)[this->pos];
-		if (token->type != Token::Type::KEYWORD)
-			throw runtime_error(format("unexpected token {}, delete this", token->content));
-
-		if (token->content == Token::Keyword::kw_routine)
+		while (t < length)
 			routines->push_back(parseRoutine());
-		else
-			throw runtime_error(format("expected a routine definition, got {} instead", token->content));
+	}
+	catch (std::exception error)
+	{
+		deleteAll(routines.get());
+		throw error;
 	}
 
-	return routines;
+	return routines.release();
 }
 
 Routine* SyntaxParser::parseRoutine()
 {
-	Routine* routine = parseRoutineHeader();
-	
-	parseVariableDefinitions(routine);
+	MetaParser parser(this);
 
-	delete routine;
+	// Header
+	parser.verifyKeyword(Token::Keyword::kw_routine);
+	const string* name = parser.getString();
 
-	return nullptr;
-}
+	parser.verifyKeyword(Token::Keyword::kw_using);
 
-Routine* SyntaxParser::parseRoutineHeader()
-{
-	const vector<Token::token*>& tokens = *this->tokens;
-	Token::token* token;
-	const size_t length = tokens.size();
-	int& t = this->pos;
+	std::unique_ptr<vector<string*>> parameters(parser.getStringList());
+	std::unique_ptr<vector<Variable*>> variables = std::make_unique<vector<Variable*>>();
 
-	// Name
-	++t;
-	if (t >= length)
-		throw runtime_error("unexpected end of file, expected routine name");
-
-	token = tokens[t];
-	if (token->type != Token::Type::STRING)
-		throw runtime_error(format("expected a routine name, got {} instead", token->content));
-
-	string name = token->content;
-	std::cout << "Routine name is " << name << '\n';
-
-	// Using keyword
-	++t;
-	if (t >= length)
-		throw runtime_error(format("incomplete routine header for {}, missing using keyword", name));
-
-	token = tokens[t];
-	if (token->type != Token::Type::KEYWORD || token->content != Token::Keyword::kw_using)
-		throw runtime_error(format("incomplete routine header for {}, missing using keyword", name));
-
-	// Parameter list
-	++t;
-	if (t >= length)
-		throw runtime_error(format("incomplete parameter list for {}", name));
-
-	token = tokens[t];
-	if (token->type != Token::Type::STRING && token->content != Token::Keyword::kw_nothing)
-		throw runtime_error(format("invalid parameter '{}' for {}", token->content, name));
-
-	vector<Variable*>* variables = new vector<Variable*>();
-	++t;
-	if (t >= length)
-		throw runtime_error(format("expected : after parameter list for {}", name));
-
-	if (token->content == Token::Keyword::kw_nothing)
-	{
-		// No parameters (nothing)
-		token = tokens[t];
-		if (token->type != Token::Type::CONTROL_FLOW || token->first() != Token::colon)
-			throw runtime_error(format("expected : after parameter list for {}", name));
-		++t;
-	}
-	else
-	{
-		variables->push_back(new Variable(token->content));
-		// List of parameters
-		while (t < length)
+	for (string* param : *parameters)
+		if (*param == "nothing" && parameters->size() > 1)
 		{
-			// , or :
-			token = tokens[t];
-			if (token->type != Token::Type::CONTROL_FLOW)
-				throw runtime_error(format("expected , or : but got {} in parameter list for {}", token->content, name));
-			if (token->first() == Token::colon)
-			{
-				++t;
-				goto finishedParameters;
-			}
-
-			if (token->first() != Token::comma)
-				throw runtime_error(format("expected , but got {} in parameter list for {}", token->content, name));
-
-			++t;
-			if (t >= length)
-				throw runtime_error(format("expected parameter name after , in parameter list for {}", name));
-
-			// Parameter name
-			token = tokens[t];
-			if (token->type != Token::Type::STRING)
-				throw runtime_error(format("invalid parameter name '{}' in parameter list for {}", token->content, name));
-			variables->push_back(new Variable(token->content));
-			++t;
+			deleteAll(variables.get());
+			throw runtime_error(format("cannot use \"nothing\" with other parameters (in routine {})", *name));
 		}
-		throw runtime_error(format("unterminated parameter list for {}", name));
-	}
+		else
+			variables->push_back(new Variable(*param));
 
-	finishedParameters:
-	std::cout << "Got parameters.\n";
+	/*std::cout << "Got parameters.\n";
 	for (Variable*& var : *variables)
-		std::cout << var->name << "\n";
+		std::cout << var->name << "\n";*/
 
-	return new Routine(name, variables);
-}
+	std::unique_ptr<Routine> routine(new Routine(
+		*name,
+		parameters->size() - (*parameters->at(0) == "nothing" ? 1 : 0),
+		variables.release()
+	));
 
-void SyntaxParser::parseVariableDefinitions(Routine* routine)
-{
-	const vector<Token::token*>& tokens = *this->tokens;
-	Token::token* token;
-	const size_t length = tokens.size();
-	int& t = this->pos;
+	// Body
+	std::unique_ptr<vector<std::pair<string*, ExpressionNode*>>> definitions(parser.parseVarDefList());
 
-	while (t < length)
+	for (std::pair<string*, ExpressionNode*>& result : *definitions)
 	{
-		token = tokens[t];
-		if (token->type != Token::Type::KEYWORD || token->content != Token::Keyword::kw_define)
-			break;
-
-		// Variable name
-		++t;
-		if (t >= length)
-			throw runtime_error(format("expected variable name"));
-
-		token = tokens[t];
-		if (token->type != Token::Type::STRING)
-			throw runtime_error(format("invalid variable name {}", token->content));
-		string name = token->content;
-
-		std::cout << format("Name is {}\n", name);
-
-		// Variable assignment
-		++t;
-		if (t >= length)
-			throw runtime_error(format("unexpected end of variable definition"));
-
-		token = tokens[t];
-
-		if (token->type == Token::Type::CONTROL_FLOW && token->first() == Token::semicolon)
-		{
-			// No definition
-			++t;
-			continue;
-		}
-		else if (token->type == Token::Type::OPERATOR && token->first() == Token::Operator::equal)
-		{
-			// Expression reader
-			// Step back so the expression reader can read the variable name
-			--t;
-			ExpressionReader expressionReader(this);
-			routine->subtrees->push_back(expressionReader.parseExpression(ExpressionReader::Context::INLINE));
-			continue;
-		}
-		else throw runtime_error(format("unexpected token {} in variable definition, delete this", token->content));
+		routine->variables->push_back(new Variable(*result.first));
+		if (result.second)
+			routine->subtrees->push_back(result.second);
 	}
+
+	std::unique_ptr<vector<AbstractNode*>> block(parser.parseBlock());
+
+	for (AbstractNode*& node : *block)
+		routine->subtrees->push_back(node);
+
+	return routine.release();
 }

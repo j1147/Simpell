@@ -8,7 +8,8 @@ class Tokenizer
 public:
 	CodeWrapper* wrapper;
 	Tokenizer(CodeWrapper* wrapper) : wrapper(wrapper) {};
-	std::vector<Token::token*>* scan();
+	std::vector<Token::token*>* scan() const;
 	Token::token* readIdentifier() const;
 	Token::token* readNumber() const;
+	Token::token* readStringLiteral() const;
 };
