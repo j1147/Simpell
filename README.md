@@ -6,9 +6,12 @@ Completed features:
 * Expressions, including parenthetical sequences
 * Strings
 * Printing
+
 Still working on:
 * Specifying file path
+
 The future?
 * Arrays
 * Advanced string modification
 * Functions as first-class citizens
+
