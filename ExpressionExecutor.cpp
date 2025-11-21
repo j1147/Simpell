@@ -26,7 +26,7 @@ Value* ExpressionExecutor::execute(RoutineContext* routineContext, ExpressionRea
 {
 	const AbstractNode& top = *this->expression->top;
 
-	std::unique_ptr<vector<const AbstractNode*>> nodes = std::make_unique<vector<const AbstractNode*>>();
+	const std::unique_ptr<vector<const AbstractNode*>> nodes = std::make_unique<vector<const AbstractNode*>>();
 	top.dumpToStack(nodes.get());
 
 	vector<Value*>& variableValues = routineContext->values;
@@ -52,7 +52,7 @@ Value* ExpressionExecutor::execute(RoutineContext* routineContext, ExpressionRea
 #endif
 				// String values
 				stack->push_back(new Value(
-					new string(node->token->content)
+					new string(node->token->content) // !!!
 				));
 			}
 			else if (node->token->type == Token::Type::NAME)
@@ -65,14 +65,16 @@ Value* ExpressionExecutor::execute(RoutineContext* routineContext, ExpressionRea
 				if (v == -1)
 					throw runtime_error(format("undefined variable {} (near line {})", node->token->content, node->token->lineNumber));
 				
-				// Hacky fix for assignments
+				// Hacky fix for assignment statements
 				if (!variableValues[v] && !(
 					node->parent->token->type == Token::Type::OPERATOR
 					&& node->parent->token->first() == Token::Operator::equal.first()
 					&& node->parent == this->expression->top
+					&& context == ExpressionReader::Context::INLINE
 				))
 					throw runtime_error(format("variable {} has not been declared yet (near line {})", node->token->content, node->token->lineNumber));
 				
+				// Only allowed to be null when an assignment takes place
 				stack->push_back(variableValues[v] ? variableValues[v]->clone() : nullptr);
 			}
 			else if (node->token->type == Token::Type::KEYWORD && node->token->content == Token::Keyword::kw_call.content)
@@ -101,21 +103,30 @@ Value* ExpressionExecutor::execute(RoutineContext* routineContext, ExpressionRea
 					throw error;
 				}
 
-				stack->push_back(routineContext->mainProgram->callRoutine(
+				Value* returnValue = routineContext->mainProgram->callRoutine(
 					*routineCall->routineName,
 					args.get()
-				));
+				);
+
+				if (!returnValue && !(context == ExpressionReader::Context::INLINE && this->expression->top == node))
+					throw runtime_error(format("undefined routine result from {}", *routineCall->routineName));
+
+				stack->push_back(returnValue);
 
 				deleteAll(args.get());
 			}
 			else if (node->token->type == Token::Type::OPERATOR)
 			{
+#ifdef DEBUG_OUTPUT
+				std::cout << "Going to operate with \n";
+#endif
 				// And finally, the most important operation: operators
 				const char op = node->token->first();
 				if (stack->size() < 1)
 					throw runtime_error(format("undefined right-hand side for {} (near line {})", op, node->token->lineNumber));
 
 				Value* rhs = stack->back();
+				// Does not call destructor. Destroys the pointer, like delete &rhs; not delete rhs;
 				stack->pop_back();
 
 				// Unary operators
@@ -154,6 +165,7 @@ Value* ExpressionExecutor::execute(RoutineContext* routineContext, ExpressionRea
 					// Variable is already known to exist, otherwise it wouldn't be on the stack
 					int v = routineContext->findVariable(operatorNode->left->token->content);
 					assert(v != -1);
+					assert(v < routineContext->values.size());
 
 					delete routineContext->values[v];
 					routineContext->values[v] = rhs;
@@ -193,12 +205,12 @@ Value* ExpressionExecutor::execute(RoutineContext* routineContext, ExpressionRea
 							));
 						else
 							stack->push_back(new Value(new string(
-								std::to_string(lhs->getDouble()) + *rhs->getString()
+								Executor::prettyPrintDouble(lhs->getDouble()) + *rhs->getString()
 							)));
 					else
 						if (rhs->which == Value::Which::Double)
 							stack->push_back(new Value(new string(
-								*lhs->getString() + std::to_string(rhs->getDouble())
+								*lhs->getString() + Executor::prettyPrintDouble(rhs->getDouble())
 							)));
 						else
 							stack->push_back(new Value(new string(

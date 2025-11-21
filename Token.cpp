@@ -95,12 +95,12 @@ bool Token::Operator::isUnaryOperator(char character)
 unsigned int Token::Operator::getPrecedence(char character)
 {
 	if (character == equal.first()
-		|| character == less_than.first()
-		|| character == greater_than.first())
+		|| character == op_or.first()
+		|| character == op_and.first())
 		return 0;
 
-	if (character == op_and.first()
-		|| character == op_or.first())
+	if (character == less_than.first()
+		|| character == greater_than.first())
 		return 1;
 
 	if (character == add.first()

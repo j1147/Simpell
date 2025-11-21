@@ -45,6 +45,26 @@ bool MetaParser::softVerifyKeyword(const Token::token& keyword)
 	return true;
 }
 
+bool MetaParser::softVerifyTerminator(const ExpressionReader::Context context)
+{
+	const vector<Token::token*>& tokens = *this->parser->tokens;
+	const size_t length = tokens.size();
+	int& t = this->parser->pos;
+
+	if (t >= length)
+		return false;
+	if (tokens[t]->type != Token::Type::CONTROL_FLOW)
+		return false;
+
+	if (context == ExpressionReader::Context::CONDITION && tokens[t]->first() != Token::colon)
+		return false;
+	else if (context == ExpressionReader::Context::INLINE && tokens[t]->first() != Token::semicolon)
+		return false;
+	
+	++t;
+	return true;
+}
+
 string* MetaParser::getString()
 {
 	const vector<Token::token*>& tokens = *this->parser->tokens;
@@ -57,6 +77,7 @@ string* MetaParser::getString()
 	if (tokens[t]->type != Token::Type::NAME)
 		throw runtime_error(format("expected a name or string, but got {} instead", tokens[t]->content));
 
+	// !!!
 	return &tokens[t++]->content;
 }
 
@@ -73,6 +94,7 @@ string* MetaParser::getStringOrNothing()
 		&& (tokens[t]->type != Token::Type::KEYWORD || tokens[t]->content != Token::Keyword::kw_nothing.content))
 		throw runtime_error(format("expected a name or string, but got {} instead", tokens[t]->content));
 
+	// !!!
 	return &tokens[t++]->content;
 }
 
@@ -115,7 +137,11 @@ vector<std::pair<string*, ExpressionNode*>>* MetaParser::parseVarDefList()
 	catch (std::exception error)
 	{
 		for (std::pair<string*, ExpressionNode*>& pair : *out)
+		{
 			delete pair.second;
+			pair.second = nullptr;
+			pair.first = nullptr;
+		}
 		out->clear();
 		throw error;
 	}
@@ -217,6 +243,14 @@ vector<AbstractNode*>* MetaParser::parseBlock()
 				if (nodes->size() == 0 || (*nodes)[nodes->size() - 1]->token->content != Token::Keyword::kw_if.content)
 					throw runtime_error(format("dangling else block"));
 
+				if (t >= length)
+					throw runtime_error(format("unexpected end of file"));
+
+				if (tokens[t]->type != Token::Type::CONTROL_FLOW || tokens[t]->first() != Token::colon)
+					throw runtime_error(format("missing : after else"));
+				++t;
+
+
 				nodes->push_back(new BlockNode(
 					keyword,
 					parseBlock())
@@ -253,6 +287,9 @@ vector<string*>* MetaParser::getStringList()
 	while (t < length)
 	{
 		strings->push_back(getStringOrNothing());
+
+		if (t >= length)
+			throw runtime_error(format("unexpected end of file"));
 
 		if (tokens[t]->type == Token::Type::CONTROL_FLOW)
 			if (tokens[t]->first() == Token::colon)

@@ -14,16 +14,25 @@
 using std::vector;
 using std::string;
 
-int main()
+int main(int argcount, char* args[])
 {
     std::cout << "Starting to read file\n";
-	string path = "C:/code.txt";
+
+	if (argcount < 2)
+	{
+		std::cout << "File path not detected, aborting.\n";
+		return 1;
+	}
+
+	string path(args[1]);
+
+	std::cout << "Reading from file at " << path << "\n";
 
 	std::ifstream file(path, std::ifstream::ate | std::ifstream::binary);
 	if (!file.is_open())
 	{
 		std::cerr << "Failed to open file @" << path << ", please check that the file exists.\n";
-		return 0;
+		return 1;
 	}
 
 	// Get file length
@@ -58,12 +67,13 @@ int main()
 		if (tokens)
 		{
 			deleteAll(tokens);
-			delete(tokens);
+			delete tokens;
 		}
 		return 1;
 	}
 
 	delete wrapper;
+	wrapper = nullptr;
 
 	std::cout << "Scanned " << tokens->size() << " tokens\n";
 
@@ -107,10 +117,14 @@ int main()
 
 cleanup:
 	if (routines)
+	{
 		deleteAll(routines);
-	delete routines;
+		delete routines;
+	}
 
 	if (tokens)
+	{
 		deleteAll(tokens);
-	delete tokens;
+		delete tokens;
+	}
 }

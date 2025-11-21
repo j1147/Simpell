@@ -24,5 +24,6 @@ public:
 	{};
 
 	int findVariable(const string& name) const;
+	Value* releaseReturnValue();
 	~RoutineContext();
 };

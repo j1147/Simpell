@@ -133,6 +133,7 @@ Token::token* Tokenizer::readStringLiteral() const
 			throw runtime_error(format("invalid character in string literal on line {}", wrapper->lineNumber));
 		content += code[i++];
 	}
+
 	if (i >= length)
 		throw runtime_error("unterminated string literal");
 	++i;

@@ -80,7 +80,18 @@ void OperatorNode::dumpToStack(vector<const AbstractNode*>* stack) const {
 OperatorNode::~OperatorNode()
 {
 	if (left)
+	{
 		delete left;
+		left = nullptr;
+	}
 	if (right)
+	{
 		delete right;
+		right = nullptr;
+	}
+	if (parent)
+	{
+		parent->disown(this);
+		parent = nullptr;
+	}
 }

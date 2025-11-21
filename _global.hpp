@@ -7,7 +7,10 @@ void deleteAll(std::vector<T*>* vector)
 {
 	if (!vector)
 		return;
-	for (T* t : *vector)
+	for (T*& t : *vector)
+	{
 		delete t;
+		t = nullptr;
+	}
 	vector->clear();
 }

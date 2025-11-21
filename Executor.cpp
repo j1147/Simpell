@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <format>
 #include <memory>
+#include <random>
 
 #include <iostream>
 
@@ -18,10 +19,12 @@ using std::string;
 using std::runtime_error;
 using std::format;
 
+unsigned int Executor::STACK_DEPTH = 0;
+
 bool Executor::isTruthy(const Value* value)
 {
 	// JavaScript-like if statements
-		// If the string does not exist, is "", or the numerical value is 0, the condition is not satisfied
+	// If the string does not exist, is "", or the numerical value is 0, the condition is not satisfied
 	if (!value)
 		return false;
 	if (value->which == Value::Which::String
@@ -33,12 +36,29 @@ bool Executor::isTruthy(const Value* value)
 	return true;
 }
 
+string Executor::prettyPrintDouble(const double value)
+{
+	string result = std::to_string(value);
+	if (result.find('.') == std::string::npos)
+		return result;
+	// Ex: 33.00 => 33, 4500.00 => 4500
+	if (result.find_last_not_of('0') == result.find('.'))
+		result.erase(result.find_last_not_of('0'), std::string::npos);
+	// Ex: 12.30400 => 12.304
+	else if (result.find_last_not_of('0') > result.find('.'))
+		result.erase(result.find_last_not_of('0') + 1, std::string::npos);
+
+	return result;
+}
+
 void Executor::execute() const
 {
 	std::unique_ptr<vector<const Value*>> programInput = std::make_unique<vector<const Value*>>();
 #ifdef DEBUG_OUTPUT
 	std::cout << "Routines: " << this->routines->size() << "\n";
 #endif
+
+	Executor::STACK_DEPTH = 0;
 
 	try
 	{
@@ -53,7 +73,7 @@ void Executor::execute() const
 	}
 }
 
-Value* Executor::callRoutine(const string& name, vector<const Value*>* args) const
+Value* Executor::callRoutine(const string& name, const vector<const Value*>* args) const
 {
 	// Special functions
 	if (name == "print")
@@ -74,7 +94,20 @@ Value* Executor::callRoutine(const string& name, vector<const Value*>* args) con
 		std::cout << "\n";
 		return nullptr;
 	}
+	else if (name == "random")
+	{
+		if (args->size() != 0)
+			throw runtime_error(format("expected 0 arguments for random, but got {}", args->size()));
 
+		std::random_device device;
+		std::mt19937 rng(device());
+
+		std::uniform_int_distribution<int> distribution(0, 0x7fff'ffff);
+
+		return new Value(distribution(rng)/(double) 0x7fff'ffff);
+	}
+
+	// Find and execute function
 	for (const Routine* routine : *this->routines)
 	{
 		if (routine->name == name)
@@ -83,6 +116,10 @@ Value* Executor::callRoutine(const string& name, vector<const Value*>* args) con
 #ifdef DEBUG_OUTPUT
 			std::cout << "Starting execution of " << name << " with " << args->size() << " arguments\n";
 #endif
+			++Executor::STACK_DEPTH;
+			if (Executor::STACK_DEPTH > Executor::MAX_CALL_STACK_SIZE)
+				throw runtime_error(format("stack overflow occured trying to run {}", name));
+
 			std::unique_ptr<RoutineContext> context(new RoutineContext(this, routine));
 			if (args->size() != routine->parameters)
 				throw runtime_error(format("expected {} arguments for {}, but got {}", routine->parameters, name, args->size()));
@@ -92,9 +129,34 @@ Value* Executor::callRoutine(const string& name, vector<const Value*>* args) con
 
 			BlockExecutor executor(routine);
 			executor.execute(context.get());
-			return context->returnValue;
+			--Executor::STACK_DEPTH;
+			return context->releaseReturnValue();
 		}
 	}
 
 	throw runtime_error(format("could not find routine {}", name));
 }
+
+
+
+/*
+
+
+
+Executor:
+creates a RoutineContext, which contains a vector of Values
+RoutineContext->values = vector<Value*>
+
+arg list then clones itself into values
+RoutineContext->values = args.clone()
+
+
+BlockExecutor:
+
+modifies returnValue of RoutineContext
+deletes results of ExpressionExecutor
+
+ExpressionExecutor:
+
+
+*/

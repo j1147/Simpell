@@ -38,6 +38,7 @@ public:
 
 	void verifyKeyword(const Token::token& keyword);
 	bool softVerifyKeyword(const Token::token& keyword);
+	bool softVerifyTerminator(const ExpressionReader::Context context);
 	string* getString();
 	string* getStringOrNothing();
 	vector<std::pair<string*, ExpressionNode*>>* parseVarDefList();

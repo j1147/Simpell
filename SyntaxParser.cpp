@@ -67,6 +67,12 @@ Routine* SyntaxParser::parseRoutine()
 		else
 			variables->push_back(new Variable(*param));
 
+	if (parameters->size() == 0)
+	{
+		deleteAll(variables.get());
+		throw runtime_error(format("invalid number of parameters (in routine {})", *name));
+	}
+
 	/*std::cout << "Got parameters.\n";
 	for (Variable*& var : *variables)
 		std::cout << var->name << "\n";*/

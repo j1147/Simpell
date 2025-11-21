@@ -1,24 +1,25 @@
 #pragma once
 #include <cassert>
 #include <string>
+#include <iostream>
 
 class Value
 {
 public:
 	enum class Which { Double, String } which;
-
 	union Internal
 	{
 		double numeric_value;
 		std::string* string_value;
 	} value;
+	bool deleted;
 
-	Value(double value) : which(Value::Which::Double)
+	Value(double value) : which(Value::Which::Double), deleted(false)
 	{
 		this->value = { .numeric_value = value };
 	}
 
-	Value(std::string* value) : which(Value::Which::String)
+	Value(std::string* value) : which(Value::Which::String), deleted(false)
 	{
 		this->value = { .string_value = value };
 	}
@@ -56,7 +57,11 @@ public:
 	Value* clone() const
 	{
 		if (this->which == Value::Which::String)
-			return new Value(new std::string(*this->value.string_value));
+		{
+			std::string* result = new std::string();
+			*result = *this->value.string_value;
+			return new Value(result);
+		}
 		else if (this->which == Value::Which::Double)
 			return new Value(this->value.numeric_value);
 
@@ -65,6 +70,7 @@ public:
 	}
 
 	~Value() {
+		deleted = true;
 		if (which == Value::Which::String && this->value.string_value)
 		{
 			delete this->value.string_value;

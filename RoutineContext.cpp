@@ -20,8 +20,16 @@ int RoutineContext::findVariable(const string& name) const
 	return -1;
 }
 
+Value* RoutineContext::releaseReturnValue()
+{
+	Value* returnValue = this->returnValue;
+	this->returnValue = nullptr;
+	return returnValue;
+}
+
 RoutineContext::~RoutineContext()
 {
-	values.clear();
+	//values.clear();
+	deleteAll(&values);
 	delete returnValue;
 }

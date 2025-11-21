@@ -17,7 +17,6 @@ public:
 	SyntaxParser(const vector<Token::token*>* tokens) : tokens(tokens), pos(0) {};
 	string getLineNumber();
 
-
 	vector<Routine*>* parse();
 	Routine* parseRoutine();
 
