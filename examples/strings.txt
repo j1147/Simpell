@@ -1,0 +1,43 @@
+routine dna using nothing:
+	define rng = call random with nothing;
+	if rng < 0.25:
+		yield "g";
+		done;
+	else:
+		if rng < 0.5:
+			yield "c";
+			done;
+		else:
+			if rng < 0.75:
+				yield "a";
+				done;
+			else:
+				yield "t";
+				done;
+			done;
+		done;
+	done;
+
+routine main using nothing:
+	define dnaStrand = "";
+	define bases = 0;
+	define result;
+
+	call print with "String test: " + 45;
+	call print with "String test: " + 4500;
+	call print with "String test: " + 4.5;
+	call print with "String test: " + 0.0045;
+
+	call print with 45;
+	call print with 4500;
+	call print with 4.5;
+	call print with 0.0045;
+	during bases < 15:
+		result = call dna with nothing;
+		dnaStrand = dnaStrand + result;
+		bases = bases + 1;
+		done;
+	call print with "A strand of DNA:";
+	call print with dnaStrand;
+	call print with nothing;
+	done;

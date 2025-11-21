@@ -1,0 +1,53 @@
+routine roll_die using nothing:
+	define rng = call random with nothing;
+	rng = rng * 6;
+
+	// The if-else tree of perplexity
+	if rng < 1:
+		yield 1;
+		done;
+	else:
+		if rng < 2:
+			yield 2;
+			done;
+		else:
+			if rng < 3:
+				yield 3;
+				done;
+			else:
+				if rng < 4:
+					yield 4;
+					done;
+				else:
+					if rng < 5:
+						yield 5;
+						done;
+					else:
+						yield 6;
+						done;
+					done;
+				done;
+			done;
+		done;
+	done;
+
+routine main using nothing:
+	define result;
+
+	define roll = 1;
+	define rolls = 20;
+	define sum = 0;
+
+	during roll < rolls:
+		call print with "Rolling dice.";
+		result = call roll_die with nothing;
+		call print with "Result: " + result;
+
+		roll = roll + 1;
+		sum = sum + result;
+		done;
+
+	call print with "Finished rolling dice.";
+	call print with "Average: " + (sum/rolls);
+	call print with nothing;
+	done;

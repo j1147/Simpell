@@ -1,0 +1,30 @@
+routine fibonacci using n:
+	define left;
+	define right;
+
+	if n < 2 | n = 2:
+		yield 1;
+		done;
+	else:
+		right = call fibonacci with n - 1;
+		left = call fibonacci with n - 2;
+		yield left + right;
+		done;
+	done;
+
+routine main using nothing:
+	define result;
+	define i = 1;
+	define limit = 20;
+	define count = 0;
+	call print with "Recursive fibonacci numbers from " + i + " to " + limit;
+
+	during i < limit:
+		result = call fibonacci with i;
+		call print with result;
+		i = i + 1;
+		done;
+
+	call print with "Finished calculating fibonacci numbers.";
+	call print with nothing;
+	done;
